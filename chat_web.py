@@ -162,6 +162,11 @@ def import_chat():
     msg_p_a = re.compile(r"^(\d{2}:\d{2}) ([^ ]+) (.*)$")
 
     cur_d, ins, skp = "0000.00.00", 0, 0
+    
+    # 批次寫入緩存
+    msg_batch = []
+    stock_mentions_batch = []
+    
     for line in content.splitlines():
         line = line.strip()
         if not line: continue
@@ -178,13 +183,53 @@ def import_chat():
             h_stock = 1 if codes else 0
             h_link = 1 if "http" in msg.lower() else 0
             
-            cursor.execute("INSERT OR IGNORE INTO messages (chat_id, date, time, name, message, timestamp, has_stock_code, has_link) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (chat_id, cur_d, ts_str, snd, msg, ts, h_stock, h_link))
-            if cursor.rowcount > 0:
-                ins += 1; mid = cursor.lastrowid
-                for c in codes: cursor.execute("INSERT OR IGNORE INTO stock_mentions (message_id, stock_code) VALUES (?, ?)", (mid, c))
-            else: skp += 1
+            # 使用 UUID 作為這筆 message 的臨時識別碼，以便在同一批次建立關聯
+            temp_msg_id = str(uuid.uuid4())
+            msg_batch.append((chat_id, cur_d, ts_str, snd, msg, ts, h_stock, h_link, temp_msg_id))
+            
+            if codes:
+                for c in codes:
+                    stock_mentions_batch.append((temp_msg_id, c))
+            
+            # 滿 5000 筆寫入一次
+            if len(msg_batch) >= 5000:
+                _flush_import_batches(cursor, msg_batch, stock_mentions_batch)
+                ins += len(msg_batch)
+                msg_batch.clear()
+                stock_mentions_batch.clear()
+                
+    # 寫入剩餘資料
+    if msg_batch:
+        _flush_import_batches(cursor, msg_batch, stock_mentions_batch)
+        ins += len(msg_batch)
+        
     conn.commit(); conn.close()
     return jsonify({"ok": True, "chat_id": chat_id, "chat_name": chat_name_from_file, "inserted": ins, "skipped": skp, "duplicate_file": False})
+
+def _flush_import_batches(cursor, msg_batch, stock_mentions_batch):
+    # 先建一個暫存表來存放這次批次的訊息
+    cursor.execute("CREATE TEMPORARY TABLE temp_msgs (temp_id TEXT, chat_id INTEGER, date TEXT, time TEXT, name TEXT, message TEXT, timestamp INTEGER, has_stock_code INTEGER, has_link INTEGER)")
+    cursor.executemany("INSERT INTO temp_msgs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", [(m[8], m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7]) for m in msg_batch])
+    
+    # 將暫存表的資料 INSERT OR IGNORE 到正式表
+    cursor.execute("INSERT OR IGNORE INTO messages (chat_id, date, time, name, message, timestamp, has_stock_code, has_link) SELECT chat_id, date, time, name, message, timestamp, has_stock_code, has_link FROM temp_msgs")
+    
+    # 取得剛插入的真實 ID (利用 SQLite rowid 對應條件)
+    # 這部分為了效能，我們直接回撈 temp_id 對應的 id
+    # 建立一個 mapping
+    cursor.execute("SELECT m.id, t.temp_id FROM messages m JOIN temp_msgs t ON m.chat_id = t.chat_id AND m.timestamp = t.timestamp AND m.name = t.name AND m.message = t.message")
+    id_map = {row['temp_id']: row['id'] for row in cursor.fetchall()}
+    
+    # 處理股票關聯
+    if stock_mentions_batch:
+        final_mentions = []
+        for temp_id, code in stock_mentions_batch:
+            if temp_id in id_map:
+                final_mentions.append((id_map[temp_id], code))
+        if final_mentions:
+            cursor.executemany("INSERT OR IGNORE INTO stock_mentions (message_id, stock_code) VALUES (?, ?)", final_mentions)
+            
+    cursor.execute("DROP TABLE temp_msgs")
 
 @app.route('/api/stocks/top')
 def top_stocks():

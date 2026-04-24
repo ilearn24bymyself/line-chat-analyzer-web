@@ -22,6 +22,8 @@ class StockExtractor:
             except Exception:
                 self.whitelist = {}
                 self.name_to_code = {}
+        # Pre-sort items for performance (longest name first)
+        self._sorted_items = sorted(self.name_to_code.items(), key=lambda x: -len(x[0])) if self.name_to_code else []
 
     def extract(self, text):
         """Extract stock codes from text (supports 4-digit codes AND Chinese names)."""
@@ -42,9 +44,8 @@ class StockExtractor:
                 found.add(code)
 
         # 2. Chinese name recognition (whitelist-based, longest match first)
-        if self.name_to_code:
-            # Sort by name length descending to match longer names first (e.g. 台積電 before 台積)
-            for name, code in sorted(self.name_to_code.items(), key=lambda x: -len(x[0])):
+        if self._sorted_items:
+            for name, code in self._sorted_items:
                 if len(name) >= 2 and name in text:
                     found.add(code)
 
@@ -52,10 +53,10 @@ class StockExtractor:
 
     def extract_names(self, text):
         """Return matched Chinese stock names from text."""
-        if not text or not self.name_to_code:
+        if not text or not self._sorted_items:
             return []
         matched = []
-        for name in sorted(self.name_to_code.keys(), key=lambda x: -len(x)):
+        for name, _ in self._sorted_items:
             if len(name) >= 2 and name in text:
                 matched.append(name)
         return matched
