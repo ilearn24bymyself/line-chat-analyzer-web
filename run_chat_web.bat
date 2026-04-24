@@ -1,0 +1,6 @@
+@echo off
+chcp 65001 > nul
+echo Starting LINE Chat Analyzer Web Viewer...
+echo Automatic browser opening in 1.5 seconds...
+python chat_web.py
+pause

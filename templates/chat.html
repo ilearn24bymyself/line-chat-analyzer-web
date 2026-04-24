@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LINE Chat Analyzer | 投資分析版</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>LINE Analyzer</h2>
+                <div id="total_stats" class="stats-text">載入中...</div>
+            </div>
+            
+            <div class="import-section">
+                <button id="importBtn" class="primary-btn">匯入聊天室 (.txt)</button>
+                <input type="file" id="fileInput" accept=".txt" style="display: none;">
+            </div>
+
+            <hr class="divider">
+
+            <div class="filter-section">
+                <h3>聊天室清單</h3>
+                <div id="chatroomList" class="chatroom-list"></div>
+            </div>
+
+            <hr class="divider">
+
+            <div class="filter-section">
+                <div class="flex-between">
+                    <h3>個股與連結</h3>
+                    <div class="toggle-group">
+                        <label class="switch-label">
+                            <input type="checkbox" id="stockOnlyToggle"> 僅看個股
+                        </label>
+                        <label class="switch-label">
+                            <input type="checkbox" id="linkOnlyToggle"> 僅顯連結
+                        </label>
+                    </div>
+                </div>
+                <div id="stockTags" class="tag-list" style="margin-top: 1rem;"></div>
+            </div>
+
+            <hr class="divider">
+
+            <div class="filter-section">
+                <h3>活躍發言者</h3>
+                <div id="senderTags" class="tag-list"></div>
+            </div>
+
+            <div class="sidebar-footer">
+                <button id="resetBtn" class="secondary-btn">清除重置</button>
+            </div>
+        </aside>
+
+        <main class="main-container">
+            <header class="top-bar">
+                <div class="search-flex">
+                    <input type="text" id="searchInput" placeholder="搜尋關鍵字或股票代號..." autoComplete="off">
+                    <button id="searchBtn" class="primary-btn">搜尋</button>
+                </div>
+                <div id="current_info" class="current-info">所有訊息</div>
+            </header>
+
+            <div id="results" class="results-area">
+                <div class="loading">正在分析系統數據...</div>
+            </div>
+
+            <div id="pagination_trigger" style="height: 1px;"></div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="overlay" class="overlay" style="display: none;">
+        <div class="modal">
+            <h3 id="modalTitle">標題</h3>
+            <div id="modalBody">
+                <p id="modalMsg">訊息內容</p>
+            </div>
+            <div id="modalActions" class="modal-actions" style="display: none;">
+                <button onclick="closeModal()" class="secondary-btn">關閉</button>
+                <button id="confirmBtn" class="primary-btn" style="display: none;">確定</button>
+            </div>
+        </div>
+    </div>
+
+    <template id="importOptionsTemplate">
+        <div class="import-opts">
+            <p>準備匯入檔案，請選擇處理方式：</p>
+            <label class="check-label">
+                <input type="checkbox" id="cleanupCheck" checked> 匯入前先移除同聊天室舊資料 (推薦)
+            </label>
+            <div class="modal-btns">
+                <button id="startImportBtn" class="primary-btn">確認匯入</button>
+                <button onclick="closeModal()" class="secondary-btn">取消</button>
+            </div>
+        </div>
+    </template>
+
+    <template id="renameTemplate">
+        <div class="rename-box">
+            <input type="text" id="renameInput" class="modal-input" placeholder="輸入新名稱">
+            <div class="modal-btns">
+                <button id="saveRenameBtn" class="primary-btn">儲存</button>
+                <button onclick="closeModal()" class="secondary-btn">取消</button>
+            </div>
+        </div>
+    </template>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

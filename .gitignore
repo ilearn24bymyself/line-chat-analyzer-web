@@ -1,0 +1,22 @@
+# Git 忽略清單 (防止私密聊天紀錄外流)
+
+# 資料庫 (包含您的私密聊天內容，絕對不可上傳)
+*.db
+*.db.bak
+chat_backup_*.db
+dbs/
+
+# 日誌檔
+*.log
+
+# Python 快取
+__pycache__/
+*.pyc
+
+# 作業系統檔案
+.DS_Store
+Thumbs.db
+
+# 個人暫存檔
+*.txt
+!stock_codes.json
