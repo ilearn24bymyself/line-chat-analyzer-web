@@ -20,3 +20,5 @@ Thumbs.db
 # 個人暫存檔
 *.txt
 !stock_codes.json
+
+!requirements.txt
